@@ -16,6 +16,8 @@ from en16931.xpaths import get_entity
 from en16931.xpaths import get_invoice_lines
 from en16931.xpaths import get_discount
 from en16931.xpaths import get_charge
+from en16931.attachment import Attachment, DocumentReference
+from en16931.delivery import DeliveryInformation, DeliveryTerms
 
 
 templates = Environment(
@@ -154,6 +156,18 @@ class Invoice:
         self._discount_percent = None
         self._original_xml = None
         self._payment_means_code = None
+        # New EN16931 attributes
+        self._buyer_reference = None
+        self._order_reference = None
+        self._billing_reference = None
+        self._contract_document_reference = None
+        self._invoice_period_start = None
+        self._invoice_period_end = None
+        self._delivery_information = None
+        self._delivery_terms = None
+        self._note = None  # Invoice note/comments
+        self._attachments = []  # Document attachments
+        self._additional_document_references = []
         self.lines = []
 
     @classmethod
@@ -777,3 +791,196 @@ class Invoice:
         Only used when importing from an XML file.
         """
         self._payable_amount = parse_money(value, self._currency)
+
+    # New EN16931 standard properties
+
+    @property
+    def buyer_reference(self):
+        """Property: Buyer reference string.
+        
+        An identifier assigned by the buyer used for internal routing purposes.
+        """
+        return self._buyer_reference
+
+    @buyer_reference.setter
+    def buyer_reference(self, reference):
+        """Set the buyer reference."""
+        self._buyer_reference = reference
+
+    @property
+    def order_reference(self):
+        """Property: Order reference ID.
+        
+        An identifier of a referenced order line.
+        """
+        return self._order_reference
+
+    @order_reference.setter
+    def order_reference(self, reference):
+        """Set the order reference."""
+        self._order_reference = reference
+
+    @property
+    def billing_reference(self):
+        """Property: Billing reference.
+        
+        The identification of an Invoice that was previously sent by the Seller.
+        """
+        return self._billing_reference
+
+    @billing_reference.setter
+    def billing_reference(self, reference):
+        """Set the billing reference."""
+        self._billing_reference = reference
+
+    @property
+    def contract_document_reference(self):
+        """Property: Contract document reference.
+        
+        The identification of a contract.
+        """
+        return self._contract_document_reference
+
+    @contract_document_reference.setter
+    def contract_document_reference(self, reference):
+        """Set the contract document reference."""
+        self._contract_document_reference = reference
+
+    @property
+    def invoice_period_start(self):
+        """Property: Invoice period start date."""
+        return self._invoice_period_start
+
+    @invoice_period_start.setter
+    def invoice_period_start(self, date):
+        """Set the invoice period start date."""
+        if isinstance(date, str):
+            self._invoice_period_start = parse_date(date)
+        elif isinstance(date, datetime):
+            self._invoice_period_start = date
+        elif date is None:
+            self._invoice_period_start = None
+        else:
+            msg = "Expected a string or datetime object, received: {}"
+            raise ValueError(msg.format(type(date)))
+
+    @property
+    def invoice_period_end(self):
+        """Property: Invoice period end date."""
+        return self._invoice_period_end
+
+    @invoice_period_end.setter
+    def invoice_period_end(self, date):
+        """Set the invoice period end date."""
+        if isinstance(date, str):
+            self._invoice_period_end = parse_date(date)
+        elif isinstance(date, datetime):
+            self._invoice_period_end = date
+        elif date is None:
+            self._invoice_period_end = None
+        else:
+            msg = "Expected a string or datetime object, received: {}"
+            raise ValueError(msg.format(type(date)))
+
+    @property
+    def delivery_information(self):
+        """Property: Delivery information."""
+        return self._delivery_information
+
+    @delivery_information.setter
+    def delivery_information(self, delivery_info):
+        """Set the delivery information."""
+        if delivery_info is None:
+            self._delivery_information = None
+        elif isinstance(delivery_info, DeliveryInformation):
+            self._delivery_information = delivery_info
+        else:
+            msg = "Expected a DeliveryInformation object but got a {}"
+            raise TypeError(msg.format(type(delivery_info)))
+
+    @property
+    def delivery_terms(self):
+        """Property: Delivery terms."""
+        return self._delivery_terms
+
+    @delivery_terms.setter
+    def delivery_terms(self, terms):
+        """Set the delivery terms."""
+        if terms is None:
+            self._delivery_terms = None
+        elif isinstance(terms, DeliveryTerms):
+            self._delivery_terms = terms
+        else:
+            msg = "Expected a DeliveryTerms object but got a {}"
+            raise TypeError(msg.format(type(terms)))
+
+    @property
+    def note(self):
+        """Property: Invoice note/comments.
+        
+        A textual note that gives unstructured information that is relevant to the Invoice.
+        """
+        return self._note
+
+    @note.setter
+    def note(self, note_text):
+        """Set the invoice note."""
+        self._note = note_text
+
+    @property
+    def attachments(self):
+        """Property: List of document attachments."""
+        return self._attachments
+
+    def add_attachment(self, attachment):
+        """Add a document attachment.
+        
+        Parameters
+        ----------
+        attachment: Attachment
+            An Attachment instance.
+        """
+        if not isinstance(attachment, Attachment):
+            msg = "Expected an Attachment object but got a {}"
+            raise TypeError(msg.format(type(attachment)))
+        self._attachments.append(attachment)
+
+    def add_attachment_from_file(self, file_path, description=None, document_type=None):
+        """Add an attachment from a file path.
+        
+        Parameters
+        ----------
+        file_path: string
+            Path to the file to attach.
+        description: string (optional)
+            Description of the attachment.
+        document_type: string (optional)
+            Type classification of the document.
+        
+        Returns
+        -------
+        Attachment
+            The created attachment object.
+        """
+        attachment = Attachment(description=description, document_type=document_type)
+        attachment.load_from_file(file_path)
+        self.add_attachment(attachment)
+        return attachment
+
+    @property
+    def additional_document_references(self):
+        """Property: List of additional document references."""
+        return self._additional_document_references
+
+    def add_document_reference(self, document_reference):
+        """Add an additional document reference.
+        
+        Parameters
+        ----------
+        document_reference: DocumentReference
+            A DocumentReference instance.
+        """
+        if not isinstance(document_reference, DocumentReference):
+            msg = "Expected a DocumentReference object but got a {}"
+            raise TypeError(msg.format(type(document_reference)))
+        self._additional_document_references.append(document_reference)

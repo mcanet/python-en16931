@@ -5,12 +5,60 @@
   <cbc:ProfileID>{{ invoice.profile_id }}</cbc:ProfileID>
   <cbc:ID>{{ invoice.invoice_id }}</cbc:ID>
   <cbc:IssueDate>{{ invoice.issue_date.strftime("%Y-%m-%d") }}</cbc:IssueDate>
-  {% if invoice.due_date is defined -%}
+  {% if invoice.due_date -%}
     <cbc:DueDate>{{ invoice.due_date.strftime("%Y-%m-%d") }}</cbc:DueDate>
   {% endif -%}
   <cbc:InvoiceTypeCode>{{ invoice.invoice_type_code }}</cbc:InvoiceTypeCode>
+  {% if invoice.note -%}
+  <cbc:Note>{{ invoice.note }}</cbc:Note>
+  {% endif -%}
   <cbc:DocumentCurrencyCode>{{ invoice.currency }}</cbc:DocumentCurrencyCode>
   <cbc:TaxCurrencyCode>{{ invoice.currency }}</cbc:TaxCurrencyCode>
+  {% if invoice.buyer_reference -%}
+  <cbc:BuyerReference>{{ invoice.buyer_reference }}</cbc:BuyerReference>
+  {% endif -%}
+  {% if invoice.invoice_period_start or invoice.invoice_period_end -%}
+  <cac:InvoicePeriod>
+    {% if invoice.invoice_period_start -%}
+    <cbc:StartDate>{{ invoice.invoice_period_start.strftime("%Y-%m-%d") }}</cbc:StartDate>
+    {% endif -%}
+    {% if invoice.invoice_period_end -%}
+    <cbc:EndDate>{{ invoice.invoice_period_end.strftime("%Y-%m-%d") }}</cbc:EndDate>
+    {% endif -%}
+  </cac:InvoicePeriod>
+  {% endif -%}
+  {% if invoice.order_reference -%}
+  <cac:OrderReference>
+    <cbc:ID>{{ invoice.order_reference }}</cbc:ID>
+  </cac:OrderReference>
+  {% endif -%}
+  {% if invoice.billing_reference -%}
+  <cac:BillingReference>
+    <cac:InvoiceDocumentReference>
+      <cbc:ID>{{ invoice.billing_reference }}</cbc:ID>
+    </cac:InvoiceDocumentReference>
+  </cac:BillingReference>
+  {% endif -%}
+  {% if invoice.contract_document_reference -%}
+  <cac:ContractDocumentReference>
+    <cbc:ID>{{ invoice.contract_document_reference }}</cbc:ID>
+  </cac:ContractDocumentReference>
+  {% endif -%}
+  {% for doc_ref in invoice.additional_document_references -%}
+  <cac:AdditionalDocumentReference>
+    {% if doc_ref.document_id -%}
+    <cbc:ID>{{ doc_ref.document_id }}</cbc:ID>
+    {% endif -%}
+    {% if doc_ref.document_type -%}
+    <cbc:DocumentType>{{ doc_ref.document_type }}</cbc:DocumentType>
+    {% endif -%}
+    {% if doc_ref.attachment -%}
+    <cac:Attachment>
+      <cbc:EmbeddedDocumentBinaryObject mimeCode="{{ doc_ref.attachment.mime_type }}" encodingCode="{{ doc_ref.attachment.encoding }}" filename="{{ doc_ref.attachment.filename }}">{{ doc_ref.attachment.encoded_data }}</cbc:EmbeddedDocumentBinaryObject>
+    </cac:Attachment>
+    {% endif -%}
+  </cac:AdditionalDocumentReference>
+  {% endfor -%}
   <cac:AccountingSupplierParty>
     <cac:Party>
       <cbc:EndpointID schemeID="{{ invoice.seller_party.endpoint_scheme or '9920' }}">{{ invoice.seller_party.party_legal_entity_id }}</cbc:EndpointID>
@@ -164,6 +212,46 @@
       </cac:TaxSubtotal>
     {% endfor -%}
   </cac:TaxTotal>
+  {% if invoice.delivery_information -%}
+  <cac:Delivery>
+    {% if invoice.delivery_information.actual_delivery_date -%}
+    <cbc:ActualDeliveryDate>{{ invoice.delivery_information.actual_delivery_date.strftime("%Y-%m-%d") }}</cbc:ActualDeliveryDate>
+    {% endif -%}
+    {% if invoice.delivery_information.location_id or invoice.delivery_information.delivery_address -%}
+    <cac:DeliveryLocation>
+      {% if invoice.delivery_information.location_id -%}
+      <cbc:ID{% if invoice.delivery_information.location_scheme_id %} schemeID="{{ invoice.delivery_information.location_scheme_id }}"{% endif %}>{{ invoice.delivery_information.location_id }}</cbc:ID>
+      {% endif -%}
+      {% if invoice.delivery_information.delivery_address -%}
+      <cac:Address>
+        <cbc:StreetName>{{ invoice.delivery_information.delivery_address.address }}</cbc:StreetName>
+        {% if invoice.delivery_information.delivery_address.address2 -%}
+        <cbc:AdditionalStreetName>{{ invoice.delivery_information.delivery_address.address2 }}</cbc:AdditionalStreetName>
+        {% endif -%}
+        <cbc:CityName>{{ invoice.delivery_information.delivery_address.city_name }}</cbc:CityName>
+        <cbc:PostalZone>{{ invoice.delivery_information.delivery_address.postal_zone }}</cbc:PostalZone>
+        {% if invoice.delivery_information.delivery_address.province -%}
+        <cbc:CountrySubentity>{{ invoice.delivery_information.delivery_address.province }}</cbc:CountrySubentity>
+        {% endif -%}
+        <cac:Country>
+          <cbc:IdentificationCode>{{ invoice.delivery_information.delivery_address.country }}</cbc:IdentificationCode>
+        </cac:Country>
+      </cac:Address>
+      {% endif -%}
+    </cac:DeliveryLocation>
+    {% endif -%}
+  </cac:Delivery>
+  {% endif -%}
+  {% if invoice.delivery_terms -%}
+  <cac:DeliveryTerms>
+    {% if invoice.delivery_terms.delivery_terms_code -%}
+    <cbc:ID>{{ invoice.delivery_terms.delivery_terms_code }}</cbc:ID>
+    {% endif -%}
+    {% if invoice.delivery_terms.delivery_location -%}
+    <cbc:SpecialTerms>{{ invoice.delivery_terms.delivery_location }}</cbc:SpecialTerms>
+    {% endif -%}
+  </cac:DeliveryTerms>
+  {% endif -%}
   <cac:LegalMonetaryTotal>
     <cbc:LineExtensionAmount currencyID="{{ invoice.currency }}">{{ invoice.line_extension_amount }}</cbc:LineExtensionAmount>
     <cbc:TaxExclusiveAmount currencyID="{{ invoice.currency }}">{{ invoice.tax_exclusive_amount }}</cbc:TaxExclusiveAmount>

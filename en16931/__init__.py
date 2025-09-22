@@ -11,8 +11,13 @@ from en16931.bank_info import BankInfo
 from en16931.entity import Entity
 from en16931.invoice import Invoice
 from en16931.invoice_line import InvoiceLine
+from en16931.credit_note import CreditNote
+from en16931.credit_note_line import CreditNoteLine
 from en16931.tax import Tax
 from en16931.postal_address import PostalAddress
+from en16931.attachment import Attachment, DocumentReference
+from en16931.delivery import DeliveryInformation, DeliveryTerms
+from en16931.line_charges_discounts import LineCharge, LineDiscount
 from en16931 import xpaths
 from en16931 import b2brouter
 from en16931 import utils
