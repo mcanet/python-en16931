@@ -1,4 +1,0 @@
-Jinja2
-lxml
-py-money
-requests

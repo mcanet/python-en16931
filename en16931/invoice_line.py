@@ -7,6 +7,7 @@ from money.currency import Currency
 from en16931.tax import Tax
 from en16931.utils import parse_float
 from en16931.utils import parse_money
+from en16931.line_charges_discounts import LineCharge, LineDiscount
 
 
 UNIT_CODES = {
@@ -113,6 +114,9 @@ class InvoiceLine:
         self.tax_percent = tax_percent
         self.tax_category = tax_category
         self.tax_name = tax_name
+        # Line-level charges and discounts
+        self._line_charges = []
+        self._line_discounts = []
 
     @property
     def currency(self):
@@ -290,3 +294,87 @@ class InvoiceLine:
         return "{}: {} {} x {} {}".format(self.__class__, self.quantity,
                                           self.item_name, self.price,
                                           self.currency)
+
+    # Line-level charges and discounts support
+
+    @property
+    def line_charges(self):
+        """Property: List of line-level charges."""
+        return self._line_charges
+
+    def add_line_charge(self, charge):
+        """Add a line-level charge.
+
+        Parameters
+        ----------
+        charge: LineCharge
+            A LineCharge instance.
+        """
+        if not isinstance(charge, LineCharge):
+            msg = "Expected a LineCharge object but got a {}"
+            raise TypeError(msg.format(type(charge)))
+        self._line_charges.append(charge)
+
+    @property
+    def line_discounts(self):
+        """Property: List of line-level discounts."""
+        return self._line_discounts
+
+    def add_line_discount(self, discount):
+        """Add a line-level discount.
+
+        Parameters
+        ----------
+        discount: LineDiscount
+            A LineDiscount instance.
+        """
+        if not isinstance(discount, LineDiscount):
+            msg = "Expected a LineDiscount object but got a {}"
+            raise TypeError(msg.format(type(discount)))
+        self._line_discounts.append(discount)
+
+    def total_charges_amount(self):
+        """Calculate total amount of line-level charges.
+
+        Returns
+        -------
+        Money
+            Total charges amount.
+        """
+        total = parse_money("0", self._currency)
+        for charge in self._line_charges:
+            if charge.is_valid():
+                total += charge.amount
+        return total
+
+    def total_discounts_amount(self):
+        """Calculate total amount of line-level discounts.
+
+        Returns
+        -------
+        Money
+            Total discounts amount.
+        """
+        total = parse_money("0", self._currency)
+        base_amount = self._price * self.quantity if self._price and self.quantity else parse_money("0", self._currency)
+        
+        for discount in self._line_discounts:
+            if discount.is_valid():
+                total += discount.calculate_discount_amount(base_amount)
+        return total
+
+    def net_line_extension_amount(self):
+        """Calculate net line extension amount including charges and discounts.
+
+        Returns
+        -------
+        Money
+            Net line extension amount (base amount + charges - discounts).
+        """
+        if self.line_extension_amount is None:
+            return None
+        
+        net_amount = self.line_extension_amount
+        net_amount += self.total_charges_amount()
+        net_amount -= self.total_discounts_amount()
+        return net_amount
